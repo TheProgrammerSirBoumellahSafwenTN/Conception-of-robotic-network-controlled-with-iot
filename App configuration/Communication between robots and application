@@ -1,0 +1,522 @@
+include ”PubSubClient.h” // Connect and publish to the MQTT broker
+// Code for the ESP32
+include ”WiFi.h” // Enables the ESP32 to connect to the local network (via WiFi)
+include <ESP32Servo.h>
+define DEBUGtrue
+constchar ∗ DEV ICE = ”device1”;
+Servoservo0; //createservoobjecttocontrolaservo
+Servoservo1;
+Servoservo2;
+Servoservo3;
+Servoservo4;
+Servoservo5;
+constinttrigP in = 17;
+constintechoP in = 16;
+//def inesoundspeedincm/uS
+def ineSOUND SP EED0.034
+def ineCM T O INCH0.393701
+floatdistanceCm;
+constbyteservo0P in = 33;
+constbyteservo1P in = 32;
+constbyteservo2P in = 26;
+constbyteservo3P in = 27;
+constbyteservo4P in = 14;
+
+62
+
+63
+
+constbyteservo5P in = 12;
+voidsetupServos()
+{
+ESP32PWM :: allocateT imer(0);
+ESP32PWM :: allocateT imer(1);
+ESP32PWM :: allocateT imer(2);
+ESP32PWM :: allocateT imer(3);
+servo0.setP eriodHertz(50);
+servo0.attach(servo0P in);
+servo1.setP eriodHertz(50);
+servo1.attach(servo1P in);
+servo2.setP eriodHertz(50);
+servo2.attach(servo2P in);
+servo3.setP eriodHertz(50);
+servo3.attach(servo3P in);
+servo4.setP eriodHertz(50);
+servo4.attach(servo4P in);
+servo5.setP eriodHertz(50);
+servo5.attach(servo5P in);
+}
+//W iF i
+constchar ∗ ssid = ”Aaa”; //Y ourpersonalnetworkSSID
+constchar ∗ wif i password = ”gagagaga”; //Y ourpersonalnetworkpassword
+//MQT T
+constchar ∗ mqtt server = ”192.168.240.129”; //IP of theMQT T broker
+constchar ∗ publishT opic = ”devices/device1”;
+constchar ∗ modeT opic = ”mode/device1”;
+constchar ∗ speedT opic = ”speed/device1”;
+constchar ∗ powerT opic = ”power/device1”;
+constchar ∗ statusT opic = ”status/device1”;
+constchar ∗ outT opic = ”out/device1”;
+unsignedlonglast time = 0;
+constchar ∗ mqtt username = ”imed”; //MQT T usernam
+constchar ∗ mqtt password = ”123456”; //MQT T password
+constchar ∗ clientID = DEV ICE; //MQT T clientID
+byteRUNNING = 0;
+intMODE = 1;
+
+64
+
+unsignedintSP EEED = 10;
+//InitialisetheW iF iandMQT T Clientobjects
+W iF iClientwif iClient;
+//1883isthelistenerportfortheBroker
+P ubSubClientclient(mqttserver, 1883, wif iClient);
+voidcallback(char ∗ topic, byte ∗ payload, unsignedintlength)
+{
+Stringresponse;
+for(inti = 0;i < length;i + +)
+{
+response+ = (char)payload[i];
+}
+if(DEBUG )
+{
+Serial.print(”Messagearrived[”);
+Serial.print(topic);
+Serial.print(”]”);
+Serial.println(response);
+}
+if(String(topic) == String(speedT opic))
+{Serial.println(”speeed11111”);
+if(response == ”1”)
+{
+SP EEED = 25;
+}
+elseif(response == ”2”)
+{
+SP EEED = 20;
+}
+elseif(response == ”3”)
+{
+SP EEED = 15;
+}
+elseif(response == ”4”)
+{
+SP EEED = 10;
+}
+
+65
+
+else
+{
+Serial.println(”Unsupportedspeed!!!!!”);
+}
+}
+elseif(String(topic) == String(modeT opic))
+{Serial.println(”moddde11111”);
+MODE = response.toInt();
+}
+elseif(String(topic) == String(powerT opic))
+{Serial.println(”running11111”);
+if(response == ”enable”)
+{
+RUNNING = 1;
+} else{
+RUNNING = 0;
+}
+}
+elseif(String(topic) == String(statusT opic))
+{Serial.println(”status11111”);
+client.publish(outT opic, ”online”);
+}
+if(DEBUG ){
+Serial.println(”Ondutywithsettings : ”);
+Serial.print(”RUNNING : ”);
+Serial.println(RUNNING);
+Serial.print(”MODE : ”);
+Serial.println(MODE);
+Serial.print(”SP EEED : ”);
+Serial.println(SP EEED);
+}
+}
+//CustomfunctiontoconnettotheMQT T brokerviaW iF i
+boolconnect MQT T()
+{
+Serial.print(”Connectingto”);
+Serial.println(ssid);
+
+66
+
+//ConnecttotheW iF i
+W iF i.begin(ssid, wif i password);
+//W aituntiltheconnectionhasbeenconf irmedbeforecontinuing
+while(W iF i.status()! = W L CONNECT ED)
+{
+delay(500);
+Serial.print(”.”);
+}
+//Debugging − OutputtheIP Addressof theESP8266
+Serial.println(”W iF iconnected”);
+Serial.print(”IP address : ”);
+Serial.println(W iF i.localIP());
+//ConnecttoMQT T Broker
+//client.connectreturnsabooleanvaluetoletusknowif theconnectionwassuccessful.
+//If theconnectionisf ailing, makesureyouareusingthecorrectMQT T UsernameandP assword(SetupEarlierintheInstructable)
+if(client.connect(clientID))
+{
+Serial.println(”ConnectedtoMQT T Broker!”);
+client.subscribe(speedT opic);
+client.subscribe(modeT opic);
+client.subscribe(powerT opic);
+client.subscribe(statusT opic);
+Serial.print(”Subcribedtosettingstopics”);
+Serial.println(
+′ n
+′
+);
+delay(1000);
+client.publish(outT opic, ”status”);
+returntrue;
+}
+else
+{
+Serial.println(”ConnectiontoMQT T Brokerf ailed...”);
+returnf alse;
+}
+}
+floatget distance(){
+floatdistance;
+longduration;
+
+67
+
+digitalW rite(trigP in, LOW);
+delayM icroseconds(2);
+digitalW rite(trigP in, HIGH);
+delayM icroseconds(10);
+digitalW rite(trigP in, LOW);
+duration = pulseIn(echoP in, HIGH);
+distance = duration ∗ SOUND SP EED/2;
+//P rintsthedistanceintheSerialMonitor
+Serial.print(”Distance(cm) : ”);
+Serial.println(distance);
+returndistance;
+}
+voidsetup()
+{
+Serial.begin(9600);
+while(!connect MQT T())
+{;
+}
+client.setCallback(callback);
+client.loop();
+pinMode(trigP in, OUT P UT); //SetsthetrigP inasanOutput
+pinMode(echoP in, INP UT); //SetstheechoP inasanInput
+setupServos();
+servo0.write(0);
+delay(SP EEED ∗ 20);
+servo1.write(90);
+delay(SP EEED ∗ 20);
+servo2.write(40);
+delay(SP EEED ∗ 20);
+servo3.write(120);
+delay(SP EEED ∗ 20);
+servo4.write(120);
+delay(SP EEED ∗ 20);
+servo5.write(0);
+delay(SP EEED ∗ 20);
+}
+voidmoveServo(Servoserv, intstart pos, intend pos, intspeed , intdirection = 1){
+
+68
+
+if(direction == 1)for(inti = start pos;i + +;i < end pos){serv.write(i); delay(SP EEED); }}else{for(inti = start pos;i − −;i > end pos){serv.write(i); delay(SP EEED); }}}voidonDuty(){if(RUNNING){if(MODE == 1){if(get distance() < 30){delay(2000); Serial.println(”back”); servo0.write(90); delay(SP EEED ∗ 40); servo4.write(180); delay(SP EEED ∗ 20); servo5.write(50); delay(SP EEED ∗ 20); //moveServo(servo1, 90, 20, SP EEED, −1); servo1.write(40); delay(SP EEED ∗ 20); servo2.write(100); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); client.publish(outT opic, ”online”); delay(500); servo5.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); servo4.write(40); delay(SP EEED ∗ 20); servo2.write(60); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); delay(2000); servo0.write(0); delay(SP EEED ∗ 40); servo4.write(180); delay(SP EEED ∗ 20); servo1.write(40); delay(SP EEED ∗ 20); servo2.write(100); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 30); servo5.write(50); delay(SP EEED ∗ 20); delay(500); Serial.println(”go”); servo0.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); client.publish(outT opic, ”online”); servo2.write(60); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); servo4.write(120); delay(SP EEED ∗ 20); servo5.write(0); delay(SP EEED ∗ 20); delay(500); }}elseif(MODE == 2){servo0.write(90); delay(SP EEED ∗ 40); servo4.write(180); delay(SP EEED ∗ 20); servo5.write(50); delay(SP EEED ∗ 20); //moveServo(servo1, 90, 20, SP EEED, −1); servo1.write(40); delay(SP EEED ∗ 20); servo2.write(100); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); client.publish(outT opic, ”online”); delay(500); servo5.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); servo4.write(40); delay(SP EEED ∗ 20); servo2.write(60); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); delay(2000); servo0.write(0); delay(SP EEED ∗ 40); servo4.write(180); delay(SP EEED ∗ 20); servo1.write(40); delay(SP EEED ∗ 20); servo2.write(100); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 30); servo5.write(50); delay(SP EEED ∗ 20); delay(500); Serial.println(”go”); servo0.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); client.publish(outT opic, ”online”); servo2.write(60); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); servo4.write(120); delay(SP EEED ∗ 20); servo5.write(0); delay(SP EEED ∗ 20); delay(500); }}}voidloop(){/ ∗ //P UBLISHtotheMQT T Broker(topic = T emperature, def inedatthebeginning)if(client.publish(humidity topic, ”test”)){Serial.println(”T emperaturesent!”); }//Again, client.publishwillreturnabooleanvaluedependingonwhetheritsuccededornot.//If themessagef ailedtosend, wewilltryagain, astheconnectionmayhavebroken.else{Serial.println(”T emperaturef ailedtosend.ReconnectingtoMQT T Brokerandtryingagain”); client.connect(clientID); delay(10); //T hisdelayensuresthatclient.publishdoesn
+
+′ MQT T(){Serial.print(”Connectingto”); Serial.println(ssid); //ConnecttotheW iF iW iF i.begin(ssid, wif i password); //W aituntiltheconnectionhasbeenconf irmedbeforecontinuingwhile(W iF i.status()! = W L CONNECT ED){delay(500); Serial.print(”.”); }//Debugging − OutputtheIP Addressof theESP8266Serial.println(”W iF iconnected”); Serial.print(”IP address : ”); Serial.println(W iF i.localIP()); //ConnecttoMQT T Broker//client.connectreturnsabooleanvaluetoletusknowif theconnectionwassuccessful.//If theconnectionisf ailing, makesureyouareusingthecorrectMQT T UsernameandP assword(SetupEarlierintheInstructable)if(client.connect(clientID)){Serial.println(”ConnectedtoMQT T Broker!”); client.subscribe(speedT opic); client.subscribe(modeT opic); client.subscribe(powerT opic); client.subscribe(statusT opic); Serial.print(”Subcribedtosettingstopics”); Serial.println( tclashwiththeclient.connectcallclient.publish(humidity topic, ”test”); }delay(5000); //printnewvaluesevery1M inuteSerial.print(”lastmsg”); Serial.println(msg); ∗/client.loop(); onDuty();if((millis() − last time) > 4000){client.publish(outT opic, ”online”); last time = millis(); }}Deuxi`eme client (esp32 [2]) Bras manipulateur2 : }include ”PubSubClient.h” // Connect and publish to the MQTT broker// Code for the ESP32include ”WiFi.h” // Enables the ESP32 to connect to the local network (via WiFi)include <ESP32Servo.h>define DEBUGtrueconstchar ∗ DEV ICE = ”device2”; Servoservo0; //createservoobjecttocontrolaservoServoservo1; Servoservo2; Servoservo3; Servoservo4; Servoservo5; constinttrigP in = 17; constintechoP in = 16; //def inesoundspeedincm/uSdef ineSOUND SP EED0.034def ineCM T O INCH0.393701floatdistanceCm; constbyteservo0P in = 33; constbyteservo1P in = 32; constbyteservo2P in = 26; constbyteservo3P in = 27; constbyteservo4P in = 14; constbyteservo5P in = 12; voidsetupServos(){ESP32PWM :: allocateT imer(0); ESP32PWM :: allocateT imer(1); ESP32PWM :: allocateT imer(2); ESP32PWM :: allocateT imer(3); servo0.setP eriodHertz(50); servo0.attach(servo0P in); servo1.setP eriodHertz(50); servo1.attach(servo1P in); servo2.setP eriodHertz(50); servo2.attach(servo2P in); servo3.setP eriodHertz(50); servo3.attach(servo3P in); servo4.setP eriodHertz(50); servo4.attach(servo4P in); servo5.setP eriodHertz(50); servo5.attach(servo5P in); }//W iF iconstchar ∗ ssid = ”imed”; //Y ourpersonalnetworkSSIDconstchar ∗ wif i password = ”1234567899”; //Y ourpersonalnetworkpassword//MQT T constchar ∗ mqtt server = ”192.168.43.25”; //IP of theMQT T brokerconstchar ∗ publishT opic = ”devices/device2”; constchar ∗ modeT opic = ”mode/device2”; constchar ∗ speedT opic = ”speed/device2”; constchar ∗ powerT opic = ”power/device2”; constchar ∗ statusT opic = ”status/device2”; constchar ∗ outT opic = ”out/device2”; unsignedlonglast time = 0; constchar ∗ mqtt username = ”imed”; //MQT T usernamconstchar ∗ mqtt password = ”123456”; //MQT T passwordconstchar ∗ clientID = DEV ICE; //MQT T clientIDbyteRUNNING = 0;intMODE = 1; unsignedintSP EEED = 10; //InitialisetheW iF iandMQT T ClientobjectsW iF iClientwif iClient; //1883isthelistenerportfortheBrokerP ubSubClientclient(mqtt server, 1883, wif iClient); voidcallback(char ∗ topic, byte ∗ payload, unsignedintlength){Stringresponse; for(inti = 0;i < length;i + +){response+ = (char)payload[i];if(DEBUG ){Serial.print(”Messagearrived[”); Serial.print(topic); Serial.print(”]”); Serial.println(response); }if(String(topic) == String(speedT opic)){Serial.println(”speeed11111”);if(response == ”1”){SP EEED = 25; }elseif(response == ”2”){SP EEED = 20; }elseif(response == ”3”){SP EEED = 15; }elseif(response == ”4”){SP EEED = 10; }else{Serial.println(”Unsupportedspeed!!!!!”); }}elseif(String(topic) == String(modeT opic)){Serial.println(”moddde11111”); MODE = response.toInt(); }elseif(String(topic) == String(powerT opic)){Serial.println(”running11111”);if(response == ”enable”){RUNNING = 1; else{RUNNING = 0; }}elseif(String(topic) == String(statusT opic)){Serial.println(”status11111”); client.publish(outT opic, ”online”); }if(DEBUG ){Serial.println(”Ondutywithsettings : ”); Serial.print(”RUNNING : ”); Serial.println(RUNNING); Serial.print(”MODE : ”); Serial.println(MODE); Serial.print(”SP EEED : ”); Serial.println(SP EEED); }}//CustomfunctiontoconnettotheMQT T brokerviaW iF iboolconnect
+
+′′
+); client.publish(outT opic, ”status”); returntrue; }else{Serial.println(”ConnectiontoMQT T Brokerf ailed...”); returnf alse; }}floatget distance(){floatdistance; longduration; digitalW rite(trigP in, LOW); delayM icroseconds(2); digitalW rite(trigP in, HIGH); delayM icroseconds(10); digitalW rite(trigP in, LOW); duration = pulseIn(echoP in, HIGH); distance = duration ∗ SOUND SP EED/2; //P rintsthedistanceintheSerialMonitorSerial.print(”Distance(cm) : ”); Serial.println(distance); returndistance; }voidsetup()(EN2, LOW); digitalW rite(EN3, HIGH); digitalW rite(EN4, LOW); }{Serial.begin(9600); while(!connect MQT T()){; }client.setCallback(callback); client.loop(); pinMode(trigP in, OUT P UT); //SetsthetrigP inasanOutputpinMode(echoP in, INP UT); //SetstheechoP inasanInputsetupServos(); servo0.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); servo2.write(40); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); servo4.write(120); delay(SP EEED ∗ 20); servo5.write(0); delay(SP EEED ∗ 20); }voidmoveServo(Servoserv, intstart pos, intend pos, intspeed , intdirection = 1){if(direction == 1)for(inti = start pos;i + +;i < end pos){serv.write(i); delay(SP EEED); }}else{for(inti = start pos;i − −;i > end pos)serv.write(i); delay(SP EEED); }}}voidonDuty(){if(RUNNING){if(MODE == 1){if(get distance() < 30){Serial.println(”back”); servo0.write(90); delay(SP EEED ∗ 40); servo4.write(180); delay(SP EEED ∗ 20); servo5.write(50); delay(SP EEED ∗ 20); //moveServo(servo1, 90, 20, SP EEED, −1); servo1.write(20); delay(SP EEED ∗ 20); servo2.write(100); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); delay(3000); servo5.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); servo4.write(40); delay(SP EEED ∗ 20); servo2.write(40); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); delay(2000); servo0.write(0); delay(SP EEED ∗ 40); servo4.write(180); delay(SP EEED ∗ 20); servo1.write(20); delay(SP EEED ∗ 20); servo2.write(100); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 30); servo5.write(50); delay(SP EEED ∗ 20); delay(2000); Serial.println(”go”); servo0.write(0); delay(SP EEED ∗ 20); servo1.write(90); delay(SP EEED ∗ 20); servo2.write(40); delay(SP EEED ∗ 20); servo3.write(120); delay(SP EEED ∗ 20); servo4.write(120); delay(SP EEED ∗ 20); servo5.write(0); delay(SP EEED ∗ 20); delay(2000); }}}}voidloop(){/ ∗ //P UBLISHtotheMQT T Broker(topic = T emperature, def inedatthebeginning)if(client.publish(humidity topic, ”test”)){Serial.println(”T emperaturesent!”); }//Again, client.publishwillreturnabooleanvaluedependingonwhetheritsuccededornot.//If themessagef ailedtosend, wewilltryagain, astheconnectionmayhavebroken.else{Serial.println(”T emperaturef ailedtosend.ReconnectingtoMQT T Brokerandtryingagain”); client.connect(clientID); delay(10); //T hisdelayensuresthatclient.publishdoesn
+′
+tclashwiththeclient.connectcallclient.publish(humidity topic, ”test”); }delay(5000); //printnewvaluesevery1M inuteSerial.print(”lastmsg”); Serial.println(msg); ∗/client.loop(); onDuty();if((millis() − last time) > 4000){Serial.println(”senddingon”); client.publish(outT opic, ”online”); last time = millis(); }}
+
+// MQTT
+const char *mqtt server = ”192.168.240.129”; // IP of the MQTT broker
+const char *publishTopic = ”devices/device1”;
+const char *modeTopic = ”mode/device3”;
+const char *speedTopic = ”speed/device3”;
+const char *powerTopic = ”power/device3”;
+const char *statusTopic = ”status/device3”;
+const char *outTopic = ”out/device3”;
+const char *mqtt username = ”imed”; // MQTT usernam
+const char *mqtt password = ”123456”; // MQTT password
+const char *clientID = DEVICE ; // MQTT client ID
+byte RUNNING = 0 ;
+int MODE = 1 ;
+unsigned int SPEEED = 10 ;
+unsigned long last time = 0 ;
+// Initialise the WiFi and MQTT Client objects
+WiFiClient wifiClient ;
+// 1883 is the listener port for the Broker
+PubSubClient client(mqtt server, 1883, wifiClient) ;
+void setupPins(){
+pinMode(EN1, OUTPUT) ;
+pinMode(EN2, OUTPUT) ;
+pinMode(EN3, OUTPUT) ;
+pinMode(EN4, OUTPUT) ;
+pinMode(sensor m, INPUT) ;
+pinMode(sensor l, INPUT) ;
+pinMode(sensor r, INPUT) ;
+}
+void mqtt callback(char *topic, byte *payload, unsigned int length)
+{
+String response ;
+for (int i = 0 ; i < length ; i++)
+{
+response += (char)payload[i] ;
+}
+
+69
+
+if (DEBUG
+)
+
+{
+Serial.print(”Message arrived [”) ;
+Serial.print(topic) ;
+Serial.print(”] ”) ;
+Serial.println(response) ; }
+if (String(topic) == String(speedTopic)) { Serial.println(”speeed 11111”) ;
+if (response == ”1”) {
+SPEEED = 25 ; }
+else if (response == ”2”) {
+SPEEED = 20 ; }
+else if (response == ”3”) {
+SPEEED = 15 ; }
+else if (response == ”4”) {
+SPEEED = 10 ; }
+else {
+Serial.println(”Unsupported speed ! ! ! ! !”) ; }}
+else if (String(topic) == String(modeTopic)) { Serial.println(”moddde 11111”) ;
+MODE = response.toInt() ; }
+else if (String(topic) == String(powerTopic)) { Serial.println(”running 11111”) ;
+if (response == ”enable”)
+
+70
+
+{
+RUNNING = 1 ;
+}
+else
+{ RUNNING = 0 ;
+}
+}
+else if (String(topic) == String(statusTopic))
+{ Serial.println(”status 11111”) ;
+client.publish(outTopic, ”online”) ;
+}
+if (DEBUG )
+{ Serial.println(”On duty with settings : ”) ;
+Serial.print(”RUNNING :”) ;
+Serial.println(RUNNING) ;
+Serial.print(”MODE :”) ;
+Serial.println(MODE) ;
+Serial.print(”SPEEED :”) ;
+Serial.println(SPEEED) ;
+}
+}
+// Custom function to connet to the MQTT broker via WiFi
+bool connect MQTT()
+{
+Serial.print(”Connecting to ”) ;
+Serial.println(ssid) ;
+// Connect to the WiFi
+WiFi.begin(ssid, wifipassword);
+//W aituntiltheconnectionhasbeenconf irmedbeforecontinuing
+while(W iF i.status()! = W L CONNECT ED)
+{
+delay(500);
+Serial.print(”.”);
+}
+//Debugging − OutputtheIP Addressof theESP8266
+Serial.println(”W iF iconnected”);
+Serial.print(”IP address : ”);
+
+71
+
+Serial.println(W iF i.localIP());
+//ConnecttoMQT T Broker
+//client.connectreturnsabooleanvaluetoletusknowif theconnectionwassuccessful.
+//If theconnectionisf ailing, makesureyouareusingthecorrectMQT T UsernameandP assword(SetupEarlierintheInstructable)
+if(client.connect(clientID))
+{
+Serial.println(”ConnectedtoMQT T Broker!”);
+client.subscribe(speedT opic);
+client.subscribe(modeT opic);
+client.subscribe(powerT opic);
+client.subscribe(statusT opic);
+Serial.print(”Subcribedtosettingstopics”);
+Serial.println(
+′ n
+′
+);
+
+client.publish(outT opic, ”status”);
+returntrue;
+}
+else
+{
+Serial.println(”ConnectiontoMQT T Brokerf ailed...”);
+returnf alse;
+}
+}
+voidsetup()
+{
+Serial.begin(9600);
+while(!connect MQT T())
+{;
+}
+client.setCallback(mqtt callback);
+client.loop();
+setupP ins();
+/ ∗
+/
+pinMode(ENA, OUT P UT);
+pinMode(ENB, OUT P UT);
+ledcSetup(0, 30000, 8);
+ledcSetup(1, 30000, 8);
+
+72
+
+ledcAttachP in(ENA, 0);
+ledcAttachP in(ENB, 1);
+ledcW rite(0, 165);
+ledcW rite(1, 165);
+}
+voidgo(){
+digitalW rite(EN1, HIGH);
+digitalW rite(EN2, LOW);
+digitalW rite(EN3, HIGH);
+digitalW rite(EN4, LOW);
+}
+voidlef t(){
+digitalW rite(EN1, HIGH);
+digitalW rite(EN2, LOW);
+digitalW rite(EN3, LOW);
+digitalW rite(EN4, LOW);
+}
+voidright(){
+digitalW rite(EN1, LOW);
+digitalW rite
+voidST OP(){
+digitalW rite(EN1, LOW);
+digitalW rite(EN2, LOW);
+digitalW rite(EN3, LOW);
+digitalW rite(EN4, LOW);
+}
+voidback(){
+digitalW rite(EN2, HIGH);
+digitalW rite(EN1, LOW);
+digitalW rite(EN4, HIGH);
+digitalW rite(EN3, LOW);
+}
+}voidloop()
+{
+/ ∗
+//P UBLISHtotheMQT T Broker(topic = T emperature, def inedatthebeginning)
+if(client.publish(humidity topic, ”test”)){
+
+73
+
+Serial.println(”T emperaturesent!”);
+}
+//Again, client.publishwillreturnabooleanvaluedependingonwhetheritsuccededornot.
+//If themessagef ailedtosend, wewilltryagain, astheconnectionmayhavebroken.
+else{
+Serial.println(”T emperaturef ailedtosend.ReconnectingtoMQT T Brokerandtryingagain”);
+client.connect(clientID);
+delay(10); //T hisdelayensuresthatclient.publishdoesn′
+
+tclashwiththeclient.connectcall
+
+client.publish(humidity topic, ”test”);
+}
+delay(5000); //printnewvaluesevery1M inute
+Serial.print(”lastmsg”);
+Serial.println(msg); ∗/
+client.loop();
+if((millis() − last time) > 4000)
+{
+Serial.println(”sendingonline”);
+client.publish(outT opic, ”online”);
+last time = millis();
+}
+if(RUNNING){
+bytesensorM = digitalRead(sensor m);
+bytesensorL = digitalRead(sensor l);
+bytesensorR = digitalRead(sensor r);
+if(MODE == 1){
+if((sensorM == LOW)and(sensorL == HIGH)and(sensorR == HIGH))
+{
+go();
+elseif((sensorM == HIGH)and(sensorL == LOW)and(sensorR == HIGH))
+{
+lef t();
+}
+elseif((sensorM == LOW)and(sensorL == LOW)and(sensorR == HIGH))
+{
+lef t();
+}
+elseif((sensorM == HIGH)and(sensorL == HIGH)and(sensorR == LOW))
+
+74
+
+{
+right();
+}
+elseif((sensorM == LOW)and(sensorL == HIGH)and(sensorR == LOW))
+{
+right();
+}
+elseif((sensorM == LOW)and(sensorL == LOW)and(sensorR == LOW))
+{
+ST OP();
+delay(10000);
+go();
+delay(500);
+}
+elseif((sensorM == HIGH)and(sensorL == HIGH)and(sensorR == HIGH))
+{
+back();
+}
+}
+elseif(MODE == 2){
+if((sensorM == LOW)and(sensorL == HIGH)and(sensorR == HIGH))
+{
+go();
+}elseif((sensorM == HIGH)and(sensorL == LOW)and(sensorR == HIGH))
+{
+lef t();
+}
+elseif((sensorM == LOW)and(sensorL == LOW)and(sensorR == HIGH))
+{
+lef t();
+}
+elseif((sensorM == HIGH)and(sensorL == HIGH)and(sensorR == LOW))
+{
+right();
+}
+elseif((sensorM == LOW)and(sensorL == HIGH)and(sensorR == LOW))
+{
+
+75
+
+right();
+}
+elseif((sensorM == HIGH)and(sensorL == HIGH)and(sensorR == HIGH))
+{
+back();
+}
+}
+}else{
+STOP();
+}
+}
