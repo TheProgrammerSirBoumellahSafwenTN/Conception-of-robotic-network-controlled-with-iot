@@ -1,0 +1,376 @@
+Registre :
+from django.contrib import admin
+Register your models here.
+Configuration de l’application :
+from django.apps import AppConfig
+class DashboardConfig(AppConfig) :
+default auto field = ’django.db.models.BigAutoField’
+name = ’dashboard’
+les formes :
+from django import forms
+from django.contrib import auth
+from django.core.validators import ValidationError, EmailValidator
+class LoginForm(forms.Form) :
+id = forms.CharField(label=”, max length=20)
+password = forms.CharField(label=”, max length=20, widget=forms.PasswordInput)
+def init (self, *args, **kwargs) :
+super(). init (*args, **kwargs)
+self.fields[’id’].widget.attrs.update(’placeholder’ : ’ Username’, ’class’ :’login box’)
+self.fields[’password’].widget.attrs.update(’placeholder’ : ’ Password’, ’class’ :’login box’)
+class ConfigurationForm(forms.Form) :
+device = forms.IntegerField()
+mode = forms.CharField(max length=30)
+speed = forms.IntegerField()
+log interval = forms.IntegerField( )
+
+52
+
+53
+
+def init (self, *args, **kwargs) :
+super(). init (*args, **kwargs) self.fields[’device’].widget.attrs.update(’placeholder’ : ’
+device’, ’class’ :’configuration box’)
+self.fields[’mode’].widget.attrs.update(’placeholder’ : ’ mode’, ’class’ :’configuration box’)
+self.fields[’speed’].widget.attrs.update(’placeholder’ : ’ speed’, ’class’ :’configuration box’)
+self.fields[’log interval’].widget.attrs.update(’placeholder’ : ’ log interval’,
+’class’ :’configuration box’
+Les mod`eles :
+from django.db import models
+Create your models here.
+class Devices(models.Model) :
+device id = models.IntegerField()
+running = models.BooleanField(default=False)
+class Configurations(models.Model) :
+device = models.ForeignKey(Devices,
+on delete=models.DO NOTHING)
+mode = models.CharField(max length=30)
+speed = models.IntegerField()
+log interval = models.IntegerField(default=10)
+running = models.BooleanField(default=False)
+date = models.DateTimeField(autonow = T rue)
+classDeviceLog(models.Model) :
+device = models.F oreignKey(Devices, on delete = models.CASCADE)
+pieces = models.IntegerF ield()
+date = models.DateT imeF ield(auto now = T rue)
+f iled = models.IntegerF ield(def ault = 0)
+MQT T :
+importpaho.mqtt.clientasmqttClient
+from.modelsimportConf igurations, Devices
+importtime
+classMQT T :
+def init (self, conf ig) :
+self.client = mqttClient.Client()createnewinstance
+self.connected = F alse
+setusernameandpassword
+self.client.username pw set(
+conf ig[”user”], password = conf ig[”password”])
+
+54
+
+self.broker address = conf ig[”broker address”]
+self.port = conf ig[”port”]
+self.client.connect(self.broker address, port = self.port)
+defAsSubscriber(self, topic, onmessage) :
+self.topic = topic
+self.client.on connect = self. subscriber
+self.client.on message = on message
+self.client.loop start()
+time.sleep(10)
+self.client.loop stop()
+def subscriber(self, client, userdata, flags, rc) :
+print(f”Connectedwithresultcoderc”)
+ifrc == 0 :
+self.connected = T rue
+self.client.subscribe(self.topic)
+defAsP ublisher(self) :
+self.client.on connect = self. publisher
+def publish(self, topic, value) :
+self.client.on connect = self. publisher
+self.client.publish(topic, value)
+def publisher(self, client, userdata, msg) :
+”””T hecallbackforwhenaP UBLISHmessageisreceivedfromth$”””
+pass
+classStatus :
+def init (self, conf ig) :
+self.device1 = F alse
+self.device2 = F alse
+self.device3 = F alse
+self.subsciber = MQT T(conf ig)
+self.publisher = MQT T(conf ig)
+self.publisher.AsP ublisher()
+self.last time dev1 = time.time()
+self.last time dev2 = time.time()
+self.last time dev3 = time.time()
+defon message(self, client, userdata, msg) :
+print(f”msg.topicmsg.payload”)
+ifmsg.topic == ”out/device1” :
+
+55
+
+self.last time dev1 = time.time()
+ifmsg.payload.decode() == ”online” :
+print(”ONLINE”)
+self.device1 = T rue
+elifmsg.payload.decode() == ”status” :
+device = Devices.objects.f ilter(device id = 1).get()
+conf ig = Conf igurations.objects.f ilter(device = device).latest(”id”)
+if device.running :
+status = ”enable”
+else :
+status = ”disable”
+self.publisher.publish(”power/device1”, status)
+print(”SENDINGSET T INGT ODEV ICE”)
+print(” ∗ ∗ ∗ ∗ ∗ ∗ ∗ ∗” ∗ 4)
+time.sleep(0.5)
+self.publisher.publish(”mode/device1”, conf ig.mode)
+time.sleep(0.5)
+self.publisher.publish(”speed/device1”, conf ig.speed)
+else :
+self.device1 = F alse
+elifmsg.topic == ”out/device2” :
+self.lasttime dev2 = time.time()
+ifmsg.payload.decode() == ”online” :
+self.device2 = T rue
+elifmsg.payload.decode() == ”status” :
+device = Devices.objects.f ilter(device id = 2).get()
+conf ig = Conf igurations.objects.f ilter(device = device).latest(”id”)
+if device.running :
+status = ”enable”
+else :
+status = ”disable”
+self.publisher.publish(”power/device2”, status)
+print(”SENDINGSET T INGT ODEV ICE”)
+print(” ∗ ∗ ∗ ∗ ∗ ∗ ∗ ∗” ∗ 4)
+time.sleep(0.5)
+self.publisher.publish(”mode/device2”, conf ig.mode)
+time.sleep(0.5)
+
+56
+
+self.publisher.publish(”speed/device2”, conf ig.speed)
+else :
+self.device2 = F alse
+elifmsg.topic == ”out/device3” :
+self.lasttime dev3 = time.time()
+ifmsg.payload.decode() == ”online” :
+print(”DEV ICE3ONLINE”)
+self.device3 = T rue
+elifmsg.payload.decode() == ”status” :
+device = Devices.objects.f ilter(device id = 3).get()
+conf ig = Conf igurations.objects.f ilter(device = device).latest(”id”)
+if device.running :
+status = ”enable”
+else :
+status = ”disable”
+self.publisher.publish(”power/device3”, status)
+print(”SENDINGSET T INGT ODEV ICE”)
+print(” ∗ ∗ ∗ ∗ ∗ ∗ ∗ ∗” ∗ 4)
+time.sleep(0.5)
+self.publisher.publish(”mode/device3”, conf ig.mode)
+time.sleep(0.5)
+self.publisher.publish(”speed/device3”, conf ig.speed)
+else :
+self.device3 = F alse
+defgetstatus(self) :
+whileT rue :
+self.subsciber.AsSubscriber((”out/device3”, 0),(”out/device2”, 0),(”out/device1”, 0),
+self.on message)
+if time.time() − self.lasttime dev1 > 10 :
+self.device1 = F alse
+if time.time() − self.last time dev2 > 10 :
+self.device2 = F alse
+if time.time() − self.last time dev3 > 10 :
+self.device3 = F alse
+print(self.device3)
+Registredetest :
+
+57
+
+from django.test import TestCase
+Create your tests here.
+URLS :
+from django.urls import path, include
+from . import views
+urlpatterns = [
+path(”, views.login page, name= ’main page’),
+path(’validate’, views.login validate, name=’login validate’),
+path(’logout/’, views.logout, name=’logout’),
+path(’main/’, views.main page, name=’main’),
+path(’configuration/’, views.configuration page, name=’main’),
+path(’start device/’, views.start device, name=’start device’),
+path(’get config/’, views.get config, name=’get config’),
+path(’erase history/’, views.erase history, name=’erase history’),
+path(’get state/’, views.get state, name=’get state’),
+path(’stop device/’, views.stop device, name=’stop device’),
+path(’configure device/’, views.configure device, name=’configure device’),
+] LOGIN :
+from django.shortcuts import render
+from django.shortcuts import render, redirect, get object or 404
+from django.http import HttpResponse, HttpResponseBadRequest,
+HttpResponseNotModified, JsonResponse
+from .forms import LoginForm, ConfigurationForm
+from django.views.decorators.csrf import csrf exempt
+from django.contrib import auth
+from .models import Devices, Configurations, DeviceLog
+from .MQTT import *
+from threading import Thread
+config = {
+”broker address” :”192.168.240.129”,
+”port” : 1883,
+”user” : ”safwen”,
+”password” : ”safwen”
+}
+def onmessage(client, userdata, msg) :
+print(f”msg.topicmsg.payload”)
+topic = ”out/device1”
+
+58
+
+p = MQT T(conf ig)
+p.AsP ublisher()
+s = Status(conf ig)
+th = T hread(target = s.get status)
+th.start()
+
+def login page(request) :
+login data = LoginForm()
+return render(request, ’login page.html’, {’login data’ :login data})
+def login validate(request) :
+login data = LoginForm(request.POST)
+if login data.is valid() :
+user = auth.authenticate(username=request.POST[’id’], password=request.POST[’password’])
+if user is not None :
+if user.is active :
+auth.login(request, user)
+return redirect(’main/’)
+error message= ’Wrong creadials’
+return render(request, ’login page.html’, {’login data’ :login data,’login errors’ :error message})
+error message= ’invalid form’
+return render(request, ’login page.html’, {’login data’ :login data,’login errors’ :error message})
+def logout(request) :
+auth.logout(request)
+return redirect(’/’)
+def main page(request) :
+configs = Configurations.objects.all()
+device logs = DeviceLog.objects.all()
+list log = []
+for log in device logs :
+list log.append(
+{
+”device id” : log.device.id,
+”pieces” : log.pieces,
+”date” : log.date
+}
+)
+
+59
+
+list config = []
+for config in configs :
+list config.append(
+{
+”device id” : config.device.id,
+”mode” : config.mode,
+”date” : config.date,
+”speed” : config.speed,
+”log interval” : config.log interval
+}
+)
+return render(request, ’main.html’,
+”list config” :list config,
+”list log” :list log)
+@csrfexempt
+deferase history(request) :
+table = request.P OST[”table”]
+if table == ”conf iguration” :
+Conf igurations.objects.all().delete()
+elif table == ”logs” :
+DeviceLog.objects.all().delete()
+else :
+returnHttpResponseBadRequest(”Couldnotfullf ityourrequest”)
+returnHttpResponse(”Done!”)
+def conf iguration page(request) :
+returnrender(request,′
+
+conf iguration.html′
+,)
+
+defstart device(request) :
+p = MQT T(conf ig)
+p.AsP ublisher()
+”””ReturnfeatureactivationasJSONresponse.”””
+try :
+device id = int(request.GET[
+′device id′
+])
+
+exceptExceptionase :
+print(e)
+returnHttpResponseBadRequest(”Badrequest”)
+try :
+device = Devices.objects.f ilter(device id = device id).get()
+
+60
+
+exceptExceptionase :
+print(e)
+returnHttpResponseBadRequest(str(e))
+if device.running :
+returnHttpResponseBadRequest(”device” + str(device id) + ”alreadyrunning”)
+device.running = T rue
+device.save()
+print(device id)
+p.publish(”power/device” + str(device id), ”enable”)
+returnHttpResponse(”device” + str(device id) + ”startedsuccussfuly”)
+defstopdevice(request) :
+”””ReturnfeatureactivationasJSONresponse.”””
+p = MQT T(conf ig)
+p.AsP ublisher()
+try :
+device id = int(request.GET[
+′device id′
+])
+
+exceptExceptionase :
+print(e)
+returnHttpResponseBadRequest(”Badrequest”)
+try :
+device = Devices.objects.f ilter(device id = device id).get()
+exceptExceptionase :
+print(e)
+returnHttpResponseBadRequest(str(e))
+ifnotdevice.running :
+returnHttpResponseBadRequest(”device” + str(device id) + ”alreadystoped”)
+device.running = F alse
+device.save()
+print(device id)
+p.publish(”power/device” + str(device id), ”disable”)
+returnHttpResponse(”device” + str(device id) + ”stopedsuccussfuly”)
+@csrf exempt
+def conf igure device(request) :
+p = MQT T(conf ig)
+p.AsP ublisher()
+data = request.P OST
+print(data)
+
+61
+
+dev = Devices.objects.f ilter(id = int(data[”device id”][−1])).get()
+dev.running = bool(data.get(”modeOption”))
+dev.save()
+if data.get(”modeOption”) == ”enable” :
+print(””, T rue)
+state = T rue
+else :
+state = F alse
+conf ig = Conf igurations(device = dev, mode = data.get(”mode”), speed = int(data.get(”speed”)),
+log interval = int(data.get(”log interval”)), running = state)
+conf ig .save()
+p.publish(”power/device” + str(data[”device id”][−1]), data.get(”modeOption”))
+p.publish(”mode/device” + str(data[”device id”][−1]), data.get(”mode”))
+p.publish(”speed/device” + str(data[”device id”][−1]), data.get(”speed”))
+returnHttpResponse(”done”)
+defget conf ig(request) :
+returnJsonResponse(”a” : ”B”)
+defget state(request) :
+returnJsonResponse(”device1” : s.device1, ”device2” : s.device2, ”device3” : s.device3)
